@@ -1639,7 +1639,7 @@ explain_op = comp.func_to_container_op(
     name='seldon-e2e-adult-ih8de',
     description='Seldon e2e adult'
 )
-def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://34.91.115.100/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
+def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
     pvolumes_dict = OrderedDict()
     volume_step_names = []
     volume_name_parameters = []
