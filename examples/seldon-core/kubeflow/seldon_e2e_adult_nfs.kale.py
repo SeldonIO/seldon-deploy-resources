@@ -768,19 +768,16 @@ def train_explainer(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, 
     _kale_mlmd_utils.call("mark_execution_complete")
 
 
-def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, EXPLAINER_MODEL_PATH: str, INCOME_MODEL_PATH: str, MINIO_ACCESS_KEY: str, MINIO_HOST: str, MINIO_MODEL_BUCKET: str, MINIO_SECRET_KEY: str):
+def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MINIO_ACCESS_KEY: str, MINIO_HOST: str, MINIO_SECRET_KEY: str):
     pipeline_parameters_block = '''
     DEPLOY_NAMESPACE = "{}"
     DEPLOY_PASSWORD = "{}"
     DEPLOY_SERVER = "{}"
     DEPLOY_USER = "{}"
-    EXPLAINER_MODEL_PATH = "{}"
-    INCOME_MODEL_PATH = "{}"
     MINIO_ACCESS_KEY = "{}"
     MINIO_HOST = "{}"
-    MINIO_MODEL_BUCKET = "{}"
     MINIO_SECRET_KEY = "{}"
-    '''.format(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, EXPLAINER_MODEL_PATH, INCOME_MODEL_PATH, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_MODEL_BUCKET, MINIO_SECRET_KEY)
+    '''.format(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_SECRET_KEY)
 
     from kale.utils import mlmd_utils as _kale_mlmd_utils
     _kale_mlmd_utils.init_metadata()
@@ -926,34 +923,31 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
     '''
 
     block8 = '''
-    model_name = "income-classifier"
-    model_yaml=f"""apiVersion: machinelearning.seldon.io/v1
-    kind: SeldonDeployment
-    metadata:
-      name: {model_name}
-      namespace: {DEPLOY_NAMESPACE}
-    spec:
-      predictors:
-      - componentSpecs:
-        graph:
-          implementation: SKLEARN_SERVER
-          modelUri: s3://{MINIO_MODEL_BUCKET}/{INCOME_MODEL_PATH}
-          envSecretRefName: seldon-init-container-secret
-          name: classifier
-          logger:
-             mode: all
-             url: http://default-broker
-        explainer:
-          type: AnchorTabular
-          modelUri: s3://{MINIO_MODEL_BUCKET}/{EXPLAINER_MODEL_PATH}
-          envSecretRefName: seldon-init-container-secret
-        name: default
-        replicas: 1
-    """
-    d = yaml.safe_load(model_yaml)
-    model_json = json.dumps(d)
-    print(model_json)
-    created = dep_instance.create_seldon_deployment(model_json, namespace)
+    from swagger_client.models.seldon_deployment import SeldonDeployment
+    from swagger_client.models.seldon_deployment_spec import SeldonDeploymentSpec
+    from swagger_client.models.predictor_spec import PredictorSpec
+    from swagger_client.models.predictive_unit import PredictiveUnit
+    from swagger_client.models.logger import Logger
+    from swagger_client.models.object_meta import ObjectMeta
+    from swagger_client.models.type_meta import TypeMeta
+    from swagger_client.models.explainer import Explainer
+
+    model_name="income-classifier"
+    sd = SeldonDeployment(type_meta=TypeMeta(kind="SeldonDeployment"),
+                          metadata=ObjectMeta(name=model_name,namespace=namespace),
+                          spec=SeldonDeploymentSpec(predictors=[
+                              PredictorSpec(graph=PredictiveUnit(implementation="SKLEARN_SERVER",
+                                                                 model_uri="s3://seldon/sklearn/income/model",
+                                                                 env_secret_ref_name="seldon-init-container-secret",
+                                                                 name="classifier",
+                                                                 logger=Logger(mode="all",url="http://default-broker")),
+                                            explainer=Explainer(type="AnchorTabular",
+                                                                model_uri="s3://seldon/sklearn/income/explainer",
+                                                                env_secret_ref_name="seldon-init-container-secret"),
+                                            name="default",
+                                            replicas=1)
+                          ]))
+    created = dep_instance.create_seldon_deployment(namespace, sd)
     '''
 
     block9 = '''
@@ -1604,42 +1598,42 @@ def explain(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MINIO_AC
 
 
 setup_op = comp.func_to_container_op(
-    setup, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    setup, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 build_model_op = comp.func_to_container_op(
-    build_model, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    build_model, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 build_outlier_op = comp.func_to_container_op(
-    build_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    build_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 train_explainer_op = comp.func_to_container_op(
-    train_explainer, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    train_explainer, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 deploy_seldon_op = comp.func_to_container_op(
-    deploy_seldon, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    deploy_seldon, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 deploy_outlier_op = comp.func_to_container_op(
-    deploy_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    deploy_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 deploy_event_display_op = comp.func_to_container_op(
-    deploy_event_display, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    deploy_event_display, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 explain_op = comp.func_to_container_op(
-    explain, base_image='seldonio/jupyter-lab-alibi-kale:0.17')
+    explain, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
 
 
 @dsl.pipeline(
-    name='seldon-e2e-adult-ih8de',
+    name='seldon-e2e-adult-r2naa',
     description='Seldon e2e adult'
 )
-def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
+def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https:/x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
     pvolumes_dict = OrderedDict()
     volume_step_names = []
     volume_name_parameters = []
@@ -1741,7 +1735,7 @@ def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234'
             "kubeflow-kale.org/volume-name-parameters",
             json.dumps(volume_name_parameters))
 
-    deploy_seldon_task = deploy_seldon_op(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, EXPLAINER_MODEL_PATH, INCOME_MODEL_PATH, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_MODEL_BUCKET, MINIO_SECRET_KEY)\
+    deploy_seldon_task = deploy_seldon_op(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_SECRET_KEY)\
         .add_pvolumes(pvolumes_dict)\
         .after(train_explainer_task)
     deploy_seldon_task.container.working_dir = "/home/jovyan"
@@ -1840,6 +1834,6 @@ if __name__ == "__main__":
 
     # Submit a pipeline run
     from kale.utils.kfp_utils import generate_run_name
-    run_name = generate_run_name('seldon-e2e-adult-ih8de')
+    run_name = generate_run_name('seldon-e2e-adult-r2naa')
     run_result = client.run_pipeline(
         experiment.id, run_name, pipeline_filename, {})
