@@ -1,4 +1,4 @@
-IMG=seldonio/jupyter-lab-alibi-kale:0.19
+IMG=seldonio/jupyter-lab-alibi-kale:0.20
 
 swagger-codegen:
 	git clone https://github.com/swagger-api/swagger-codegen
