@@ -925,6 +925,16 @@ definitions:
     title: CustomSpec provides a hook for arbitrary container configuration.
     type: object
     x-go-package: github.com/kubeflow/kfserving/pkg/apis/serving/v1alpha2
+  CustomThemeConfig:
+    properties:
+      logo:
+        type: string
+        x-go-name: Logo
+      theme:
+        type: object
+        x-go-name: Theme
+    type: object
+    x-go-package: github.com/seldonIO/seldon-deploy/internal/util/serverutil
   DNSPolicy:
     title: DNSPolicy defines how a pod's DNS will be configured.
     type: string
@@ -1418,6 +1428,20 @@ definitions:
         $ref: '#/definitions/SecretEnvSource'
     type: object
     x-go-package: k8s.io/api/core/v1
+  EnvProps:
+    properties:
+      analyticsProps:
+        $ref: '#/definitions/AnalyticsProps'
+      clusterInfo:
+        $ref: '#/definitions/ClusterInfo'
+      customTheme:
+        $ref: '#/definitions/CustomThemeConfig'
+      userInfo:
+        $ref: '#/definitions/UserInfo'
+      versionInfo:
+        $ref: '#/definitions/VersionInfo'
+    type: object
+    x-go-package: github.com/seldonIO/seldon-deploy/internal/apis/v1alpha1
   EnvVar:
     properties:
       name:
@@ -2201,9 +2225,37 @@ definitions:
     type: object
     x-go-package: k8s.io/api/core/v1
   InferenceService:
+    description: |-
+      InferenceService is the Schema for the services API
+      +k8s:openapi-gen=true
+      +kubebuilder:object:root=true
+      +kubebuilder:subresource:status
+      +kubebuilder:printcolumn:name="URL",type="string",JSONPath=".status.url"
+      +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+      +kubebuilder:printcolumn:name="Default Traffic",type="integer",JSONPath=".status.traffic"
+      +kubebuilder:printcolumn:name="Canary Traffic",type="integer",JSONPath=".status.canaryTraffic"
+      +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+      +kubebuilder:resource:path=inferenceservices,shortName=inferenceservice
     properties:
-      TypeMeta:
-        $ref: '#/definitions/TypeMeta'
+      apiVersion:
+        description: |-
+          APIVersion defines the versioned schema of this representation of an object.
+          Servers should convert recognized schemas to the latest internal value, and
+          may reject unrecognized values.
+          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          +optional
+        type: string
+        x-go-name: APIVersion
+      kind:
+        description: |-
+          Kind is a string value representing the REST resource this object represents.
+          Servers may infer this from the endpoint the client submits requests to.
+          Cannot be updated.
+          In CamelCase.
+          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          +optional
+        type: string
+        x-go-name: Kind
       metadata:
         $ref: '#/definitions/ObjectMeta'
       spec:
@@ -2214,13 +2266,17 @@ definitions:
     x-go-package: github.com/seldonIO/seldon-deploy/internal/apis/v1alpha1/swaggerdoc
   InferenceServiceList:
     properties:
-      TypeMeta:
-        $ref: '#/definitions/TypeMeta'
+      apiVersion:
+        type: string
+        x-go-name: APIVersion
       items:
         items:
           $ref: '#/definitions/InferenceService'
         type: array
         x-go-name: Items
+      kind:
+        type: string
+        x-go-name: Kind
       metadata:
         $ref: '#/definitions/ListMeta'
     type: object
@@ -2516,14 +2572,6 @@ definitions:
   LoggerMode:
     type: string
     x-go-package: github.com/kubeflow/kfserving/pkg/apis/serving/v1alpha2
-  MLDeploymentList:
-    properties:
-      InferenceServiceList:
-        $ref: '#/definitions/InferenceServiceList'
-      SeldonDeploymentList:
-        $ref: '#/definitions/SeldonDeploymentList'
-    type: object
-    x-go-package: github.com/seldonIO/seldon-deploy/internal/apis/v1alpha1
   ManagedFieldsEntry:
     description: |-
       ManagedFieldsEntry is a workflow-id, a FieldSet and the group version of the resource
@@ -2595,6 +2643,47 @@ definitions:
         $ref: '#/definitions/MetricSourceType'
     type: object
     x-go-package: k8s.io/api/autoscaling/v2beta1
+  MonitorInputData:
+    description: |-
+      MonitorInputData represents sent in payload of monitor request
+      also passed into template to create query
+    properties:
+      Configuration:
+        type: string
+      DeploymentName:
+        type: string
+      DeploymentType:
+        type: string
+      End:
+        type: string
+      GroupBy:
+        type: string
+      ModelImage:
+        type: string
+      ModelName:
+        type: string
+      ModelVersion:
+        type: string
+      Namespace:
+        type: string
+      Offset:
+        type: string
+      Percentile:
+        type: string
+      PredictorName:
+        type: string
+      QueryTemplate:
+        type: string
+      Range:
+        type: string
+      Revision:
+        type: string
+      Start:
+        type: string
+      Step:
+        type: string
+    type: object
+    x-go-package: github.com/seldonIO/seldon-deploy/internal/monitor
   MountPropagationMode:
     title: MountPropagationMode describes mount propagation.
     type: string
@@ -5238,9 +5327,37 @@ definitions:
     type: object
     x-go-package: github.com/seldonio/seldon-core/operator/apis/machinelearning.seldon.io/v1
   SeldonDeployment:
+    description: |-
+      +genclient
+      +genclient:noStatus
+      +kubebuilder:object:root=true
+      +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+      +kubebuilder:storageversion
+      SeldonDeployment is the Schema for the seldondeployments API
+      +k8s:openapi-gen=true
+      +kubebuilder:resource:shortName=sdep
+      +kubebuilder:subresource:status
+      +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
     properties:
-      TypeMeta:
-        $ref: '#/definitions/TypeMeta'
+      apiVersion:
+        description: |-
+          APIVersion defines the versioned schema of this representation of an object.
+          Servers should convert recognized schemas to the latest internal value, and
+          may reject unrecognized values.
+          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          +optional
+        type: string
+        x-go-name: APIVersion
+      kind:
+        description: |-
+          Kind is a string value representing the REST resource this object represents.
+          Servers may infer this from the endpoint the client submits requests to.
+          Cannot be updated.
+          In CamelCase.
+          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          +optional
+        type: string
+        x-go-name: Kind
       metadata:
         $ref: '#/definitions/ObjectMeta'
       spec:
@@ -5251,13 +5368,17 @@ definitions:
     x-go-package: github.com/seldonIO/seldon-deploy/internal/apis/v1alpha1/swaggerdoc
   SeldonDeploymentList:
     properties:
-      TypeMeta:
-        $ref: '#/definitions/TypeMeta'
+      apiVersion:
+        type: string
+        x-go-name: APIVersion
       items:
         items:
           $ref: '#/definitions/SeldonDeployment'
         type: array
         x-go-name: Items
+      kind:
+        type: string
+        x-go-name: Kind
       metadata:
         $ref: '#/definitions/ListMeta'
     type: object
@@ -6128,34 +6249,6 @@ definitions:
     title: Type represents the stored type of IntOrString.
     type: integer
     x-go-package: k8s.io/apimachinery/pkg/util/intstr
-  TypeMeta:
-    description: +k8s:deepcopy-gen=false
-    properties:
-      apiVersion:
-        description: |-
-          APIVersion defines the versioned schema of this representation of an object.
-          Servers should convert recognized schemas to the latest internal value, and
-          may reject unrecognized values.
-          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-          +optional
-        type: string
-        x-go-name: APIVersion
-      kind:
-        description: |-
-          Kind is a string value representing the REST resource this object represents.
-          Servers may infer this from the endpoint the client submits requests to.
-          Cannot be updated.
-          In CamelCase.
-          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-          +optional
-        type: string
-        x-go-name: Kind
-    title: |-
-      TypeMeta describes an individual object in an API response or request
-      with strings representing the type of the object and its API schema version.
-      Structures that are versioned or persisted should inline TypeMeta.
-    type: object
-    x-go-package: k8s.io/apimachinery/pkg/apis/meta/v1
   UID:
     description: |-
       UID is a type that holds unique ID values, including UUIDs.  Because we
@@ -6459,6 +6552,48 @@ paths:
       - https
       tags:
       - Environment
+  /env:
+    get:
+      description: Read the seldon deploy environment
+      operationId: ReadEnv
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/EnvResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Environment
+  /monitor:
+    post:
+      consumes:
+      - application/json
+      description: Monitor
+      operationId: MonitorAll
+      parameters:
+      - description: Monitor Data
+        in: body
+        name: monitorData
+        required: true
+        schema:
+          $ref: '#/definitions/MonitorInputData'
+        x-go-name: MonitorData
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/GenericResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Monitor
   /namespaces/{namespace}/gitops-status:
     get:
       description: Read the GitOps status
@@ -6480,6 +6615,35 @@ paths:
       - https
       tags:
       - Gitops
+  /namespaces/{namespace}/inferenceservice/{name}/driftdetector:
+    delete:
+      description: Delete the specified Inference Service Drift Detector
+      operationId: DeleteDriftDetectorInferenceService
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/MessageResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
   /namespaces/{namespace}/inferenceservice/{name}/outlierdetector:
     delete:
       description: Delete the specified Inference Service Outlier Detector
@@ -6537,7 +6701,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - InferenceServices
     post:
       consumes:
       - application/json
@@ -6586,7 +6750,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - InferenceServices
   /namespaces/{namespace}/inferenceservices/{name}:
     delete:
       description: Delete the specified Inference Service
@@ -6633,7 +6797,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - InferenceServices
     get:
       description: Read the specified Inference Service
       operationId: ReadInferenceService
@@ -6667,7 +6831,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - InferenceServices
     put:
       consumes:
       - application/json
@@ -6722,7 +6886,73 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - InferenceServices
+  /namespaces/{namespace}/inferenceservices/{name}/driftdetector:
+    get:
+      description: Read the specified Inference Service Drift Detector
+      operationId: ReadDriftDetectorInferenceService
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/DriftDetectorResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
+    post:
+      consumes:
+      - application/json
+      description: Create the specified Inference Service Drift Detector
+      operationId: CreateDriftDetectorInferenceService
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: DriftDetector
+        in: body
+        name: driftDetector
+        required: true
+        schema:
+          $ref: '#/definitions/AlibiDetectorData'
+        x-go-name: DriftDetector
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/DriftDetectorResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
   /namespaces/{namespace}/inferenceservices/{name}/explain:
     post:
       consumes:
@@ -6824,7 +7054,7 @@ paths:
       tags:
       - Git
   /namespaces/{namespace}/inferenceservices/{name}/gitrestore:
-    post:
+    get:
       description: Restore the git commit
       operationId: InferenceServiceGitRestore
       parameters:
@@ -6863,7 +7093,7 @@ paths:
       tags:
       - Git
   /namespaces/{namespace}/inferenceservices/{name}/gitrevert:
-    post:
+    get:
       description: Revert the git commit
       operationId: InferenceServiceGitRevert
       parameters:
@@ -6954,6 +7184,44 @@ paths:
       - https
       tags:
       - Loadtest
+  /namespaces/{namespace}/inferenceservices/{name}/monitor:
+    post:
+      consumes:
+      - application/json
+      description: Monitor the specified Inference Service
+      operationId: MonitorInferenceService
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Monitor Data
+        in: body
+        name: monitorData
+        required: true
+        schema:
+          $ref: '#/definitions/MonitorInputData'
+        x-go-name: MonitorData
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/GenericResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Monitor
   /namespaces/{namespace}/inferenceservices/{name}/outlierdetector:
     get:
       description: Read the specified Inference Service Outlier Detector
@@ -7133,37 +7401,43 @@ paths:
       - https
       tags:
       - Predict
-  /namespaces/{namespace}/inferenceservices/{name}/resources:
+  /namespaces/{namespace}/inferenceservices/{name}/predictor/{predictorName}/resources:
     get:
       consumes:
       - application/json
-      description: list objects of kind resource for Inference Service
-      operationId: ListInferenceServiceResources
+      description: list objects of kind resource for Inference Service predictor
+      operationId: ListInferenceServicePredictorResources
       parameters:
-      - description: Namespace provides a logical grouping of resources
-        in: path
-        name: namespace
-        required: true
-        type: string
-        x-go-name: Namespace
-      - description: Name identifies a machine learning model
-        in: path
-        name: name
-        required: true
-        type: string
-        x-go-name: Name
-      - description: Endpoint differentiates between versions of model (e.g. default,
-          canary... etc)
-        in: query
-        name: endpoint
-        type: string
-        x-go-name: Endpoint
       - description: Component differentiates between types of model (e.g. predictor,
           explainer... etc)
         in: query
         name: component
         type: string
         x-go-name: Component
+      - description: Endpoint differentiates between versions of model (e.g. default,
+          canary... etc)
+        in: query
+        name: endpoint
+        type: string
+        x-go-name: Endpoint
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Predictor Name identifies a predictor resource
+        in: path
+        name: predictorName
+        required: true
+        type: string
+        x-go-name: PredictorName
       produces:
       - application/json
       responses:
@@ -7182,6 +7456,87 @@ paths:
       - https
       tags:
       - Resources
+  /namespaces/{namespace}/inferenceservices/{name}/resources:
+    get:
+      consumes:
+      - application/json
+      description: list objects of kind resource for Inference Service
+      operationId: ListInferenceServiceResources
+      parameters:
+      - description: Component differentiates between types of model (e.g. predictor,
+          explainer... etc)
+        in: query
+        name: component
+        type: string
+        x-go-name: Component
+      - description: Endpoint differentiates between versions of model (e.g. default,
+          canary... etc)
+        in: query
+        name: endpoint
+        type: string
+        x-go-name: Endpoint
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/ResourceListResponse'
+        "400":
+          $ref: '#/responses/ErrorDefault'
+        "405":
+          $ref: '#/responses/ErrorDefault'
+        "424":
+          $ref: '#/responses/ErrorDefault'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Resources
+  /namespaces/{namespace}/inferenceservices/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validate the given Inference Service
+      operationId: ValidateInferenceService
+      parameters:
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Inference Service
+        in: body
+        name: mldeployment
+        required: true
+        schema:
+          $ref: '#/definitions/InferenceService'
+        x-go-name: InferenceService
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/MessageResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Validate
   /namespaces/{namespace}/logger:
     delete:
       consumes:
@@ -7261,11 +7616,12 @@ paths:
       - https
       tags:
       - Logger
-  /namespaces/{namespace}/mldeployments:
-    get:
-      description: list objects of kind Machine Learning Deployment (Seldon Deployment
-        & Inference Service)
-      operationId: ListMLDeployments
+  /namespaces/{namespace}/monitor:
+    post:
+      consumes:
+      - application/json
+      description: Monitor the specified namespace
+      operationId: MonitorNamespace
       parameters:
       - description: Namespace provides a logical grouping of resources
         in: path
@@ -7273,24 +7629,25 @@ paths:
         required: true
         type: string
         x-go-name: Namespace
+      - description: Monitor Data
+        in: body
+        name: monitorData
+        required: true
+        schema:
+          $ref: '#/definitions/MonitorInputData'
+        x-go-name: MonitorData
       produces:
       - application/json
       responses:
         "200":
-          $ref: '#/responses/MLDeploymentListResponse'
-        "400":
-          $ref: '#/responses/ErrorDefault'
-        "405":
-          $ref: '#/responses/ErrorDefault'
-        "424":
-          $ref: '#/responses/ErrorDefault'
+          $ref: '#/responses/GenericResponse'
         "500":
           $ref: '#/responses/ErrorDefault'
       schemes:
       - http
       - https
       tags:
-      - MLDeployments
+      - Monitor
   /namespaces/{namespace}/seldondeployments:
     get:
       description: list objects of kind Seldon Deployment
@@ -7319,7 +7676,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - SeldonDeployments
     post:
       consumes:
       - application/json
@@ -7368,7 +7725,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - SeldonDeployments
   /namespaces/{namespace}/seldondeployments/{name}:
     delete:
       description: Delete the specified Seldon Deployment
@@ -7415,7 +7772,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - SeldonDeployments
     get:
       description: Read the specified Seldon Deployment
       operationId: ReadSeldonDeployment
@@ -7449,7 +7806,7 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - SeldonDeployments
     put:
       consumes:
       - application/json
@@ -7504,7 +7861,101 @@ paths:
       - http
       - https
       tags:
-      - MLDeployments
+      - SeldonDeployments
+  /namespaces/{namespace}/seldondeployments/{name}/driftdetector:
+    delete:
+      description: Delete the specified Seldon Deployment Drift Detector
+      operationId: DeleteDriftDetectorSeldonDeployment
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/MessageResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
+    get:
+      description: Read the specified Seldon Deployment Drift Detector
+      operationId: ReadDriftDetectorSeldonDeployment
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/DriftDetectorResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
+    post:
+      consumes:
+      - application/json
+      description: Create the specified Seldon Deployment Drift Detector
+      operationId: CreateDriftDetectorSeldonDeployment
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: DriftDetector
+        in: body
+        name: driftDetector
+        required: true
+        schema:
+          $ref: '#/definitions/AlibiDetectorData'
+        x-go-name: DriftDetector
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/DriftDetectorResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - DriftDetector
   /namespaces/{namespace}/seldondeployments/{name}/explain:
     post:
       consumes:
@@ -7606,7 +8057,7 @@ paths:
       tags:
       - Git
   /namespaces/{namespace}/seldondeployments/{name}/gitrestore:
-    post:
+    get:
       description: Restore the git commit
       operationId: SeldonDeploymentGitRestore
       parameters:
@@ -7645,7 +8096,7 @@ paths:
       tags:
       - Git
   /namespaces/{namespace}/seldondeployments/{name}/gitrevert:
-    post:
+    get:
       description: Revert the git commit
       operationId: SeldonDeploymentGitRevert
       parameters:
@@ -7736,6 +8187,44 @@ paths:
       - https
       tags:
       - Loadtest
+  /namespaces/{namespace}/seldondeployments/{name}/monitor:
+    post:
+      consumes:
+      - application/json
+      description: Monitor the specified Seldon Deployment
+      operationId: MonitorSeldonDeployment
+      parameters:
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Monitor Data
+        in: body
+        name: monitorData
+        required: true
+        schema:
+          $ref: '#/definitions/MonitorInputData'
+        x-go-name: MonitorData
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/GenericResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Monitor
   /namespaces/{namespace}/seldondeployments/{name}/outlierdetector:
     delete:
       description: Delete the specified Seldon Deployment Outlier Detector
@@ -7943,37 +8432,43 @@ paths:
       - https
       tags:
       - Predict
-  /namespaces/{namespace}/seldondeployments/{name}/resources:
+  /namespaces/{namespace}/seldondeployments/{name}/predictor/{predictorName}/resources:
     get:
       consumes:
       - application/json
-      description: list objects of kind resource for Seldon Deployment
-      operationId: ListSeldonDeploymentResources
+      description: list objects of kind resource for Seldon Deployment predictor
+      operationId: ListSeldonDeploymentPredictorResources
       parameters:
-      - description: Namespace provides a logical grouping of resources
-        in: path
-        name: namespace
-        required: true
-        type: string
-        x-go-name: Namespace
-      - description: Name identifies a machine learning model
-        in: path
-        name: name
-        required: true
-        type: string
-        x-go-name: Name
-      - description: Endpoint differentiates between versions of model (e.g. default,
-          canary... etc)
-        in: query
-        name: endpoint
-        type: string
-        x-go-name: Endpoint
       - description: Component differentiates between types of model (e.g. predictor,
           explainer... etc)
         in: query
         name: component
         type: string
         x-go-name: Component
+      - description: Endpoint differentiates between versions of model (e.g. default,
+          canary... etc)
+        in: query
+        name: endpoint
+        type: string
+        x-go-name: Endpoint
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Predictor Name identifies a predictor resource
+        in: path
+        name: predictorName
+        required: true
+        type: string
+        x-go-name: PredictorName
       produces:
       - application/json
       responses:
@@ -7992,6 +8487,87 @@ paths:
       - https
       tags:
       - Resources
+  /namespaces/{namespace}/seldondeployments/{name}/resources:
+    get:
+      consumes:
+      - application/json
+      description: list objects of kind resource for Seldon Deployment
+      operationId: ListSeldonDeploymentResources
+      parameters:
+      - description: Component differentiates between types of model (e.g. predictor,
+          explainer... etc)
+        in: query
+        name: component
+        type: string
+        x-go-name: Component
+      - description: Endpoint differentiates between versions of model (e.g. default,
+          canary... etc)
+        in: query
+        name: endpoint
+        type: string
+        x-go-name: Endpoint
+      - description: Name identifies a resource
+        in: path
+        name: name
+        required: true
+        type: string
+        x-go-name: Name
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/ResourceListResponse'
+        "400":
+          $ref: '#/responses/ErrorDefault'
+        "405":
+          $ref: '#/responses/ErrorDefault'
+        "424":
+          $ref: '#/responses/ErrorDefault'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Resources
+  /namespaces/{namespace}/seldondeployments/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validate the given Seldon Deployment
+      operationId: ValidateSeldonDeployment
+      parameters:
+      - description: Namespace provides a logical grouping of resources
+        in: path
+        name: namespace
+        required: true
+        type: string
+        x-go-name: Namespace
+      - description: Seldon Deployment
+        in: body
+        name: mldeployment
+        required: true
+        schema:
+          $ref: '#/definitions/SeldonDeployment'
+        x-go-name: SeldonDeployment
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/MessageResponse'
+        "500":
+          $ref: '#/responses/ErrorDefault'
+      schemes:
+      - http
+      - https
+      tags:
+      - Validate
   /requests:
     post:
       consumes:
@@ -8071,6 +8647,14 @@ responses:
     description: Cluster Info
     schema:
       $ref: '#/definitions/ClusterInfo'
+  DriftDetectorResponse:
+    description: Drift Detector
+    schema:
+      $ref: '#/definitions/AlibiDetectorData'
+  EnvResponse:
+    description: Env
+    schema:
+      $ref: '#/definitions/EnvProps'
   ErrorDefault:
     description: ErrorDefault Error
     schema:
@@ -8101,10 +8685,6 @@ responses:
     description: Logger Data
     schema:
       $ref: '#/definitions/LoggerDataType'
-  MLDeploymentListResponse:
-    description: Machine Learning Deployment list
-    schema:
-      $ref: '#/definitions/MLDeploymentList'
   MessageResponse:
     description: GenericMessage Message
     schema:

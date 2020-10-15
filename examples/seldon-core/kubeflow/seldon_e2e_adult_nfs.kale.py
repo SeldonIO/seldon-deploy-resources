@@ -1,4 +1,3 @@
-import kfp.dsl as dsl
 import json
 import kfp.components as comp
 from collections import OrderedDict
@@ -918,7 +917,7 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
     block7 = '''
     configuration = get_swagger_configuration()
     # create an instance of the API class
-    dep_instance = swagger_client.MLDeploymentsApi(swagger_client.ApiClient(configuration))
+    dep_instance = swagger_client.SeldonDeploymentsApi(swagger_client.ApiClient(configuration))
     namespace = 'admin' # str | Namespace provides a logical grouping of resources
     '''
 
@@ -933,7 +932,8 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
     from swagger_client.models.explainer import Explainer
 
     model_name="income-classifier"
-    sd = SeldonDeployment(type_meta=TypeMeta(kind="SeldonDeployment"),
+    sd = SeldonDeployment(kind="SeldonDeployment",
+                          api_version="v1",
                           metadata=ObjectMeta(name=model_name,namespace=namespace),
                           spec=SeldonDeploymentSpec(predictors=[
                               PredictorSpec(graph=PredictiveUnit(implementation="SKLEARN_SERVER",
@@ -1203,16 +1203,6 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
     from kale.utils import mlmd_utils as _kale_mlmd_utils
     _kale_mlmd_utils.init_metadata()
 
-    data_loading_block = '''
-    # -----------------------DATA LOADING START--------------------------------
-    from kale.marshal import utils as _kale_marshal_utils
-    _kale_marshal_utils.set_kale_data_directory("/marshal")
-    _kale_marshal_utils.set_kale_directory_file_names()
-    model_name = _kale_marshal_utils.load("model_name")
-    namespace = _kale_marshal_utils.load("namespace")
-    # -----------------------DATA LOADING END----------------------------------
-    '''
-
     block1 = '''
     import numpy as np
     from sklearn.ensemble import RandomForestClassifier
@@ -1372,7 +1362,152 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
     run(f"kubectl rollout status -n {DEPLOY_NAMESPACE} deploy/event-display -n {DEPLOY_NAMESPACE}", shell=True)
     '''
 
-    block7 = '''
+    # run the code blocks inside a jupyter kernel
+    from kale.utils.jupyter_utils import run_code as _kale_run_code
+    from kale.utils.kfp_utils import \
+        update_uimetadata as _kale_update_uimetadata
+    blocks = (pipeline_parameters_block,
+              block1,
+              block2,
+              block3,
+              block4,
+              block5,
+              block6,
+              )
+    html_artifact = _kale_run_code(blocks)
+    with open("/deploy_event_display.html", "w") as f:
+        f.write(html_artifact)
+    _kale_update_uimetadata('deploy_event_display')
+
+    _kale_mlmd_utils.call("mark_execution_complete")
+
+
+def test_outlier_detection(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MINIO_ACCESS_KEY: str, MINIO_HOST: str, MINIO_SECRET_KEY: str):
+    pipeline_parameters_block = '''
+    DEPLOY_NAMESPACE = "{}"
+    DEPLOY_PASSWORD = "{}"
+    DEPLOY_SERVER = "{}"
+    DEPLOY_USER = "{}"
+    MINIO_ACCESS_KEY = "{}"
+    MINIO_HOST = "{}"
+    MINIO_SECRET_KEY = "{}"
+    '''.format(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_SECRET_KEY)
+
+    from kale.utils import mlmd_utils as _kale_mlmd_utils
+    _kale_mlmd_utils.init_metadata()
+
+    data_loading_block = '''
+    # -----------------------DATA LOADING START--------------------------------
+    from kale.marshal import utils as _kale_marshal_utils
+    _kale_marshal_utils.set_kale_data_directory("/marshal")
+    _kale_marshal_utils.set_kale_directory_file_names()
+    model_name = _kale_marshal_utils.load("model_name")
+    namespace = _kale_marshal_utils.load("namespace")
+    # -----------------------DATA LOADING END----------------------------------
+    '''
+
+    block1 = '''
+    import numpy as np
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.compose import ColumnTransformer
+    from sklearn.pipeline import Pipeline
+    from sklearn.impute import SimpleImputer
+    from sklearn.metrics import accuracy_score
+    from sklearn.preprocessing import StandardScaler, OneHotEncoder
+    from alibi.explainers import AnchorTabular
+    from alibi.datasets import fetch_adult
+    from minio import Minio
+    from minio.error import ResponseError
+    from joblib import dump, load
+    import dill
+    import time
+    import json
+    from subprocess import run, Popen, PIPE
+    from alibi_detect.utils.data import create_outlier_batch
+    import swagger_client
+    from swagger_client.rest import ApiException
+    import yaml
+    import json
+    import urllib3
+    urllib3.disable_warnings()
+    '''
+
+    block2 = '''
+    def get_minio():
+        return Minio(MINIO_HOST,
+                        access_key=MINIO_ACCESS_KEY,
+                        secret_key=MINIO_SECRET_KEY,
+                        secure=False)
+    '''
+
+    block3 = '''
+    def get_swagger_configuration():
+        configuration = swagger_client.Configuration()
+        configuration.host = 'http://seldon-deploy.seldon-system/seldon-deploy/api/v1alpha1'
+        return configuration
+    '''
+
+    block4 = '''
+    import requests
+
+    from urllib.parse import urlparse
+
+    KF_SESSION_COOKIE_NAME = "authservice_session"
+
+
+    class SessionAuthenticator:
+        """
+        Returns the cookie token.
+        """
+
+        def __init__(self, server: str):
+            self._server = server
+
+            url = urlparse(server)
+            self._host = f"{url.scheme}://{url.netloc}"
+
+        def authenticate(self, user: str, password: str) -> str:
+            auth_path = self._get_auth_path()
+            success_path = self._submit_auth(auth_path, user, password)
+            session_cookie = self._get_session_cookie(success_path)
+            return session_cookie
+
+        def _get_auth_path(self) -> str:
+            # Send unauthenticated request
+            res = requests.get(self._server, allow_redirects=False, verify=False)
+
+            # Follow the 302 redirect
+            oidc_path = res.headers["Location"]
+            oidc_endpoint = f"{self._host}{oidc_path}"
+            res = requests.get(oidc_endpoint, allow_redirects=False, verify=False)
+
+            return res.headers["Location"]
+
+        def _submit_auth(self, auth_path: str, user: str, password: str) -> str:
+            auth_endpoint = f"{self._host}{auth_path}"
+            auth_payload = {"login": user, "password": password}
+            res = requests.post(auth_endpoint, auth_payload, allow_redirects=False, verify=False)
+            
+            login_path = res.headers["Location"]
+            login_endpoint = f"{self._host}{login_path}"
+            res = requests.get(login_endpoint, allow_redirects=False, verify=False)
+
+            return res.headers["Location"]
+
+        def _get_session_cookie(self, success_path: str) -> str:
+            success_endpoint = f"{self._host}{success_path}"
+            res = requests.get(success_endpoint, allow_redirects=False, verify=False)
+            print(res.cookies)
+            return res.cookies[KF_SESSION_COOKIE_NAME]
+
+    def authenticate():
+        authenticator = SessionAuthenticator(DEPLOY_SERVER)
+
+        cookie = authenticator.authenticate(DEPLOY_USER, DEPLOY_PASSWORD)
+        return cookie
+    '''
+
+    block5 = '''
     def predict():
         configuration = get_swagger_configuration()
         cookie = authenticate()
@@ -1382,7 +1517,7 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
         print(prediction)
     '''
 
-    block8 = '''
+    block6 = '''
     def get_outlier_event_display_logs():
         cmd=f"kubectl logs $(kubectl get pod -l app=event-display -o jsonpath='{{.items[0].metadata.name}}' -n {DEPLOY_NAMESPACE}) -n {DEPLOY_NAMESPACE}"
         ret = Popen(cmd, shell=True,stdout=PIPE)
@@ -1409,7 +1544,7 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
     print("Outlier",j["data"]["is_outlier"]==[1])
     '''
 
-    block9 = '''
+    block7 = '''
     
     '''
 
@@ -1425,13 +1560,11 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
               block5,
               block6,
               block7,
-              block8,
-              block9,
               )
     html_artifact = _kale_run_code(blocks)
-    with open("/deploy_event_display.html", "w") as f:
+    with open("/test_outlier_detection.html", "w") as f:
         f.write(html_artifact)
-    _kale_update_uimetadata('deploy_event_display')
+    _kale_update_uimetadata('test_outlier_detection')
 
     _kale_mlmd_utils.call("mark_execution_complete")
 
@@ -1598,42 +1731,46 @@ def explain(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MINIO_AC
 
 
 setup_op = comp.func_to_container_op(
-    setup, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    setup, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 build_model_op = comp.func_to_container_op(
-    build_model, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    build_model, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 build_outlier_op = comp.func_to_container_op(
-    build_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    build_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 train_explainer_op = comp.func_to_container_op(
-    train_explainer, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    train_explainer, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 deploy_seldon_op = comp.func_to_container_op(
-    deploy_seldon, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    deploy_seldon, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 deploy_outlier_op = comp.func_to_container_op(
-    deploy_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    deploy_outlier, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 deploy_event_display_op = comp.func_to_container_op(
-    deploy_event_display, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    deploy_event_display, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
+
+
+test_outlier_detection_op = comp.func_to_container_op(
+    test_outlier_detection, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 explain_op = comp.func_to_container_op(
-    explain, base_image='seldonio/jupyter-lab-alibi-kale:0.19')
+    explain, base_image='seldonio/jupyter-lab-alibi-kale:0.20')
 
 
 @dsl.pipeline(
-    name='seldon-e2e-adult-r2naa',
+    name='seldon-e2e-adult-pbjg4',
     description='Seldon e2e adult'
 )
-def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https:/x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
+def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@seldon.io', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
     pvolumes_dict = OrderedDict()
     volume_step_names = []
     volume_name_parameters = []
@@ -1799,6 +1936,28 @@ def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234'
             "kubeflow-kale.org/volume-name-parameters",
             json.dumps(volume_name_parameters))
 
+    test_outlier_detection_task = test_outlier_detection_op(DEPLOY_NAMESPACE, DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_SECRET_KEY)\
+        .add_pvolumes(pvolumes_dict)\
+        .after(deploy_event_display_task)
+    test_outlier_detection_task.container.working_dir = "/home/jovyan"
+    test_outlier_detection_task.container.set_security_context(
+        k8s_client.V1SecurityContext(run_as_user=0))
+    output_artifacts = {}
+    output_artifacts.update(
+        {'mlpipeline-ui-metadata': '/mlpipeline-ui-metadata.json'})
+    output_artifacts.update(
+        {'test_outlier_detection': '/test_outlier_detection.html'})
+    test_outlier_detection_task.output_artifact_paths.update(output_artifacts)
+    test_outlier_detection_task.add_pod_label(
+        "pipelines.kubeflow.org/metadata_written", "true")
+    dep_names = test_outlier_detection_task.dependent_names + volume_step_names
+    test_outlier_detection_task.add_pod_annotation(
+        "kubeflow-kale.org/dependent-templates", json.dumps(dep_names))
+    if volume_name_parameters:
+        test_outlier_detection_task.add_pod_annotation(
+            "kubeflow-kale.org/volume-name-parameters",
+            json.dumps(volume_name_parameters))
+
     explain_task = explain_op(DEPLOY_PASSWORD, DEPLOY_SERVER, DEPLOY_USER, MINIO_ACCESS_KEY, MINIO_HOST, MINIO_SECRET_KEY)\
         .add_pvolumes(pvolumes_dict)\
         .after(train_explainer_task)
@@ -1834,6 +1993,6 @@ if __name__ == "__main__":
 
     # Submit a pipeline run
     from kale.utils.kfp_utils import generate_run_name
-    run_name = generate_run_name('seldon-e2e-adult-r2naa')
+    run_name = generate_run_name('seldon-e2e-adult-pbjg4')
     run_result = client.run_pipeline(
         experiment.id, run_name, pipeline_filename, {})
