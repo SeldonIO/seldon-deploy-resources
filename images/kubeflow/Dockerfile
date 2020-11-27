@@ -15,6 +15,8 @@ ENV SHELL /bin/bash
 COPY bashrc /etc/bash.bashrc
 RUN echo "set background=dark" >> /etc/vim/vimrc.local
 
+RUN pip3 uninstall -y enum34
+
 # Install latest KFP SDK & Kale & JupyterLab Extension
 RUN pip3 install --upgrade pip && \
     pip3 install --upgrade "jupyterlab<2.0.0" && \
@@ -23,7 +25,7 @@ RUN pip3 install --upgrade pip && \
     jupyter labextension install kubeflow-kale-labextension
 
 
-RUN pip install alibi==0.3.2
+RUN pip install alibi==0.5.5
 
 RUN pip install -U tensorflow && \
     pip install alibi-detect
@@ -31,7 +33,7 @@ RUN pip install -U tensorflow && \
 RUN pip install minio
 
 # Seldon currently runs an old version of sklearn
-RUN pip install scikit-learn==0.20.3
+RUN pip install scikit-learn==0.23.2
 
 # Need this untill upgrade of explainer wrapper as 0.3.2 is incompatible
 RUN pip install dill==0.3.1.1

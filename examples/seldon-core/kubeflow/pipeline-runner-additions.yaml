@@ -11,6 +11,12 @@ rules:
   verbs:
   - '*'  
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - '*'  
+- apiGroups:
   - "eventing.knative.dev"
   resources:
   - triggers
@@ -29,4 +35,17 @@ subjects:
 - kind: ServiceAccount
   name: pipeline-runner
   namespace: kubeflow
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-editor-additions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pipeline-runner-additions
+subjects:
+- kind: ServiceAccount
+  name: default-editor
+  namespace: admin
 
