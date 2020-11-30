@@ -5,9 +5,9 @@
 "metadata":
   "annotations":
     "pipelines.kubeflow.org/pipeline_spec": |-
-      {"description": "Seldon e2e adult", "inputs": [{"default": "admin", "name": "DEPLOY_NAMESPACE", "optional": true}, {"default": "12341234", "name": "DEPLOY_PASSWORD", "optional": true}, {"default": "https://x.x.x.x/seldon-deploy/", "name": "DEPLOY_SERVER", "optional": true}, {"default": "admin@kubeflow.org", "name": "DEPLOY_USER", "optional": true}, {"default": "sklearn/income/explainer", "name": "EXPLAINER_MODEL_PATH", "optional": true}, {"default": "sklearn/income/model", "name": "INCOME_MODEL_PATH", "optional": true}, {"default": "minio", "name": "MINIO_ACCESS_KEY", "optional": true}, {"default": "minio-service.kubeflow:9000", "name": "MINIO_HOST", "optional": true}, {"default": "seldon", "name": "MINIO_MODEL_BUCKET", "optional": true}, {"default": "minio123", "name": "MINIO_SECRET_KEY", "optional": true}, {"default": "sklearn/income/outlier", "name": "OUTLIER_MODEL_PATH", "optional": true}], "name": "seldon-e2e-adult-xfdxg"}
+      {"description": "Seldon e2e adult", "inputs": [{"default": "admin", "name": "DEPLOY_NAMESPACE", "optional": true}, {"default": "12341234", "name": "DEPLOY_PASSWORD", "optional": true}, {"default": "https://x.x.x.x/seldon-deploy/", "name": "DEPLOY_SERVER", "optional": true}, {"default": "admin@kubeflow.org", "name": "DEPLOY_USER", "optional": true}, {"default": "sklearn/income/explainer", "name": "EXPLAINER_MODEL_PATH", "optional": true}, {"default": "sklearn/income/model", "name": "INCOME_MODEL_PATH", "optional": true}, {"default": "admin@seldon.io", "name": "MINIO_ACCESS_KEY", "optional": true}, {"default": "minio-service.kubeflow:9000", "name": "MINIO_HOST", "optional": true}, {"default": "seldon", "name": "MINIO_MODEL_BUCKET", "optional": true}, {"default": "12341234", "name": "MINIO_SECRET_KEY", "optional": true}, {"default": "sklearn/income/outlier", "name": "OUTLIER_MODEL_PATH", "optional": true}], "name": "seldon-e2e-adult-53zc2"}
   "generateName": |-
-    seldon-e2e-adult-xfdxg-
+    seldon-e2e-adult-53zc2-
 "spec":
   "arguments":
     "parameters":
@@ -38,7 +38,7 @@
     - "name": |-
         MINIO_ACCESS_KEY
       "value": |-
-        minio
+        admin@seldon.io
     - "name": |-
         MINIO_HOST
       "value": |-
@@ -50,13 +50,13 @@
     - "name": |-
         MINIO_SECRET_KEY
       "value": |-
-        minio123
+        12341234
     - "name": |-
         OUTLIER_MODEL_PATH
       "value": |-
         sklearn/income/outlier
   "entrypoint": |-
-    seldon-e2e-adult-xfdxg
+    seldon-e2e-adult-53zc2
   "serviceAccountName": |-
     pipeline-runner
   "templates":
@@ -400,17 +400,15 @@
         \ listdir(filepath) if isfile(join(filepath, f))]\n    for filename in onlyfiles:\n\
         \        print(filename)\n        print(get_minio().fput_object(MINIO_MODEL_BUCKET,\
         \ f\"{OUTLIER_MODEL_PATH}/{filename}\", join(filepath, filename)))\n    '''\n\
-        \n    block12 = '''\n    run(\"kubectl label namespace admin istio-injection=disabled\
-        \ --overwrite\", shell=True)\n    '''\n\n    # run the code blocks inside\
-        \ a jupyter kernel\n    from kale.utils.jupyter_utils import run_code as _kale_run_code\n\
-        \    from kale.utils.kfp_utils import\\\n        update_uimetadata as _kale_update_uimetadata\n\
-        \    blocks = (pipeline_parameters_block, data_loading_block,\n          \
-        \    block1,\n              block2,\n              block3,\n             \
-        \ block4,\n              block5,\n              block6,\n              block7,\n\
-        \              block8,\n              block9,\n              block10,\n  \
-        \            block11,\n              block12,\n              )\n    html_artifact\
-        \ = _kale_run_code(blocks)\n    with open(\"/build_outlier.html\", \"w\")\
-        \ as f:\n        f.write(html_artifact)\n    _kale_update_uimetadata('build_outlier')\n\
+        \n    # run the code blocks inside a jupyter kernel\n    from kale.utils.jupyter_utils\
+        \ import run_code as _kale_run_code\n    from kale.utils.kfp_utils import\\\
+        \n        update_uimetadata as _kale_update_uimetadata\n    blocks = (pipeline_parameters_block,\
+        \ data_loading_block,\n              block1,\n              block2,\n    \
+        \          block3,\n              block4,\n              block5,\n       \
+        \       block6,\n              block7,\n              block8,\n          \
+        \    block9,\n              block10,\n              block11,\n           \
+        \   )\n    html_artifact = _kale_run_code(blocks)\n    with open(\"/build_outlier.html\"\
+        , \"w\") as f:\n        f.write(html_artifact)\n    _kale_update_uimetadata('build_outlier')\n\
         \n    _kale_mlmd_utils.call(\"mark_execution_complete\")\n\nimport argparse\n\
         _parser = argparse.ArgumentParser(prog='Build outlier', description='')\n\
         _parser.add_argument(\"--DEPLOY-PASSWORD\", dest=\"DEPLOY_PASSWORD\", type=str,\
@@ -1235,7 +1233,7 @@
             type: Opaque
             stringData:
               AWS_ACCESS_KEY_ID: {MINIO_ACCESS_KEY}
-              AWS_SECRET_ACCESS_KEY: {MINIO_SECRET_KEY}
+              AWS_SECRET_ACCESS_KEY: "{MINIO_SECRET_KEY}"
               AWS_ENDPOINT_URL: http://{MINIO_HOST}
               USE_SSL: "false"
             """
@@ -1267,7 +1265,7 @@
             type: Opaque
             stringData:
               AWS_ACCESS_KEY_ID: {MINIO_ACCESS_KEY}
-              AWS_SECRET_ACCESS_KEY: {MINIO_SECRET_KEY}
+              AWS_SECRET_ACCESS_KEY: "{MINIO_SECRET_KEY}"
               AWS_ENDPOINT_URL: http://{MINIO_HOST}
               USE_SSL: "false"
             """
@@ -2210,7 +2208,7 @@
       - "name": |-
           OUTLIER_MODEL_PATH
     "name": |-
-      seldon-e2e-adult-xfdxg
+      seldon-e2e-adult-53zc2
   - "container":
       "args":
       - |-

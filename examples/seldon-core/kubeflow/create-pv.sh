@@ -1,8 +1,8 @@
 PROJECT=seldon-demos
 FS=pipeline-data
-ZONE=europe-west2-a
+ZONE=europe-west1-b
 
-gcloud beta filestore instances create ${FS}     --project=${PROJECT}     --zone=${ZONE}     --tier=STANDARD     --file-share=name="volumes",capacity=1TB     --network=name="default",reserved-ip-range="10.0.0.0/29"
+gcloud beta filestore instances create ${FS}     --project=${PROJECT}     --zone=${ZONE}     --tier=STANDARD     --file-share=name="volumes",capacity=1TB     --network=name="default",reserved-ip-range="10.0.1.0/29"
 
 FSADDR=$(gcloud beta filestore instances describe ${FS} --project=${PROJECT} --zone=${ZONE} --format="value(networks.ipAddresses[0])")
 

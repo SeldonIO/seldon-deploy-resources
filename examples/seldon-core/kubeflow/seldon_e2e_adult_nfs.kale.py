@@ -567,10 +567,6 @@ def build_outlier(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MI
         print(get_minio().fput_object(MINIO_MODEL_BUCKET, f"{OUTLIER_MODEL_PATH}/{filename}", join(filepath, filename)))
     '''
 
-    block12 = '''
-    run("kubectl label namespace admin istio-injection=disabled --overwrite", shell=True)
-    '''
-
     # run the code blocks inside a jupyter kernel
     from kale.utils.jupyter_utils import run_code as _kale_run_code
     from kale.utils.kfp_utils import \
@@ -587,7 +583,6 @@ def build_outlier(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MI
               block9,
               block10,
               block11,
-              block12,
               )
     html_artifact = _kale_run_code(blocks)
     with open("/build_outlier.html", "w") as f:
@@ -897,7 +892,7 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
     type: Opaque
     stringData:
       AWS_ACCESS_KEY_ID: {MINIO_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: {MINIO_SECRET_KEY}
+      AWS_SECRET_ACCESS_KEY: "{MINIO_SECRET_KEY}"
       AWS_ENDPOINT_URL: http://{MINIO_HOST}
       USE_SSL: "false"
     """
@@ -929,7 +924,7 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
     type: Opaque
     stringData:
       AWS_ACCESS_KEY_ID: {MINIO_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: {MINIO_SECRET_KEY}
+      AWS_SECRET_ACCESS_KEY: "{MINIO_SECRET_KEY}"
       AWS_ENDPOINT_URL: http://{MINIO_HOST}
       USE_SSL: "false"
     """
@@ -1795,10 +1790,10 @@ explain_op = comp.func_to_container_op(
 
 
 @dsl.pipeline(
-    name='seldon-e2e-adult-xfdxg',
+    name='seldon-e2e-adult-53zc2',
     description='Seldon e2e adult'
 )
-def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@kubeflow.org', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='minio', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='minio123', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
+def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@kubeflow.org', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='admin@seldon.io', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='12341234', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
     pvolumes_dict = OrderedDict()
     volume_step_names = []
     volume_name_parameters = []
@@ -2021,6 +2016,6 @@ if __name__ == "__main__":
 
     # Submit a pipeline run
     from kale.utils.kfp_utils import generate_run_name
-    run_name = generate_run_name('seldon-e2e-adult-xfdxg')
+    run_name = generate_run_name('seldon-e2e-adult-53zc2')
     run_result = client.run_pipeline(
         experiment.id, run_name, pipeline_filename, {})
