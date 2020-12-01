@@ -978,7 +978,7 @@ def deploy_seldon(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SERVER: st
                                                                 model_uri="s3://seldon/sklearn/income/explainer",
                                                                 env_secret_ref_name="seldon-init-container-secret"),
                                             name="default",
-                                            replicas=1)
+                                            replicas=1, annotations={"sidecar.istio.io/inject":"false"})
                           ]))
     created = dep_instance.create_seldon_deployment(namespace, sd)
     '''
@@ -1158,7 +1158,7 @@ def deploy_outlier(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, M
             auth_endpoint = f"{self._host}{auth_path}"
             auth_payload = {"login": user, "password": password}
             res = requests.post(auth_endpoint, auth_payload, allow_redirects=False, verify=False)
-            
+
             login_path = res.headers["Location"]
             login_endpoint = f"{self._host}{login_path}"
             res = requests.get(login_endpoint, allow_redirects=False, verify=False)
@@ -1319,7 +1319,7 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
             auth_endpoint = f"{self._host}{auth_path}"
             auth_payload = {"login": user, "password": password}
             res = requests.post(auth_endpoint, auth_payload, allow_redirects=False, verify=False)
-            
+
             login_path = res.headers["Location"]
             login_endpoint = f"{self._host}{login_path}"
             res = requests.get(login_endpoint, allow_redirects=False, verify=False)
@@ -1353,6 +1353,8 @@ def deploy_event_display(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_SER
       template:
         metadata:
           labels: *labels
+          annotations:
+            sidecar.istio.io/inject: "false"
         spec:
           containers:
             - name: event-display
@@ -1507,7 +1509,7 @@ def test_outlier_detection(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_S
             auth_endpoint = f"{self._host}{auth_path}"
             auth_payload = {"login": user, "password": password}
             res = requests.post(auth_endpoint, auth_payload, allow_redirects=False, verify=False)
-            
+
             login_path = res.headers["Location"]
             login_endpoint = f"{self._host}{login_path}"
             res = requests.get(login_endpoint, allow_redirects=False, verify=False)
@@ -1538,7 +1540,7 @@ def test_outlier_detection(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_S
     '''
 
     block6 = '''
-    
+
 
 
     def get_outlier_event_display_logs():
@@ -1562,13 +1564,13 @@ def test_outlier_detection(DEPLOY_NAMESPACE: str, DEPLOY_PASSWORD: str, DEPLOY_S
         print("Waiting for outlier logs, sleeping")
         time.sleep(2)
         j = get_outlier_event_display_logs()
-        
+
     print(j)
     print("Outlier",j["data"]["is_outlier"]==[1])
     '''
 
     block7 = '''
-    
+
     '''
 
     # run the code blocks inside a jupyter kernel
@@ -1699,7 +1701,7 @@ def explain(DEPLOY_PASSWORD: str, DEPLOY_SERVER: str, DEPLOY_USER: str, MINIO_AC
             auth_endpoint = f"{self._host}{auth_path}"
             auth_payload = {"login": user, "password": password}
             res = requests.post(auth_endpoint, auth_payload, allow_redirects=False, verify=False)
-            
+
             login_path = res.headers["Location"]
             login_endpoint = f"{self._host}{login_path}"
             res = requests.get(login_endpoint, allow_redirects=False, verify=False)
@@ -1790,7 +1792,7 @@ explain_op = comp.func_to_container_op(
 
 
 @dsl.pipeline(
-    name='seldon-e2e-adult-53zc2',
+    name='seldon-e2e-adult-8zjzc',
     description='Seldon e2e adult'
 )
 def auto_generated_pipeline(DEPLOY_NAMESPACE='admin', DEPLOY_PASSWORD='12341234', DEPLOY_SERVER='https://x.x.x.x/seldon-deploy/', DEPLOY_USER='admin@kubeflow.org', EXPLAINER_MODEL_PATH='sklearn/income/explainer', INCOME_MODEL_PATH='sklearn/income/model', MINIO_ACCESS_KEY='admin@seldon.io', MINIO_HOST='minio-service.kubeflow:9000', MINIO_MODEL_BUCKET='seldon', MINIO_SECRET_KEY='12341234', OUTLIER_MODEL_PATH='sklearn/income/outlier'):
@@ -2016,6 +2018,6 @@ if __name__ == "__main__":
 
     # Submit a pipeline run
     from kale.utils.kfp_utils import generate_run_name
-    run_name = generate_run_name('seldon-e2e-adult-53zc2')
+    run_name = generate_run_name('seldon-e2e-adult-8zjzc')
     run_result = client.run_pipeline(
         experiment.id, run_name, pipeline_filename, {})
