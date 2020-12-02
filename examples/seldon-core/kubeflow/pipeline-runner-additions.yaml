@@ -4,24 +4,24 @@ kind: ClusterRole
 metadata:
   name: pipeline-runner-additions
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - '*'  
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - '*'  
-- apiGroups:
-  - "eventing.knative.dev"
-  resources:
-  - triggers
-  verbs:
-  - '*'  
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - '*'
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - triggers
+    verbs:
+      - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -32,20 +32,80 @@ roleRef:
   kind: ClusterRole
   name: pipeline-runner-additions
 subjects:
-- kind: ServiceAccount
-  name: pipeline-runner
-  namespace: kubeflow
+  - kind: ServiceAccount
+    name: pipeline-runner
+    namespace: kubeflow
 ---
+#cross-namespace roles for default-editor as cluster-wide breaks pipeline viewer
+#using https://medium.com/faun/kubernetes-rbac-use-one-role-in-multiple-namespaces-d1d08bb08286
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: ClusterRole
 metadata:
   name: default-editor-additions
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - create
+      - delete
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - triggers
+    verbs:
+      - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-editor-additions
+  namespace: seldon-logs
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: pipeline-runner-additions
+  name: default-editor-additions
 subjects:
-- kind: ServiceAccount
-  name: default-editor
+  - kind: ServiceAccount
+    name: default-editor
+    namespace: admin
+---
+#default-editor also needs local roles for workflows in admin namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: default-editor-additions-admin
   namespace: admin
-
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-editor-additions-admin
+  namespace: admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: default-editor-additions-admin
+subjects:
+  - kind: ServiceAccount
+    name: default-editor
+    namespace: admin
